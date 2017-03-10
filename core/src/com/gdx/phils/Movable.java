@@ -12,4 +12,6 @@ public interface Movable {
 
     void moveRightFork(Sprite sprite, int direction);
 
+    void changeSprite(Sprite sprite, AbstractObject.STATE state);
+
 }

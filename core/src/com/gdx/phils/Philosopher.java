@@ -36,10 +36,15 @@ public class Philosopher extends AbstractObject implements Runnable {
         }
     }
 
+    public void addMovable(Movable m) {
+        this.movables.add(m);
+    }
+
     @Override
     public void run() {
         synchronized (this) {
             while (true) {
+                movables.forEach(movable -> movable.changeSprite(this.sprite, this.getState()));
                 think();
                 synchronized (left) {
                     left.setState(STATE.FORK_ACQUIRED);
@@ -48,17 +53,19 @@ public class Philosopher extends AbstractObject implements Runnable {
 
                     synchronized (right) {
                         right.setState(STATE.FORK_ACQUIRED);
+                        this.setState(STATE.EATING);
                         movables.forEach(movable -> {
                             movable.moveRightFork(right.sprite, Movable.DIRECTION_NEAR);
+                            movable.changeSprite(this.sprite, this.getState());
                         });
-                        this.setState(STATE.EATING);
                         eat();
                         right.setState(STATE.FORK_RELEASED);
+                        this.setState(STATE.THINKING);
                         movables.forEach(movable -> {
+                            movable.changeSprite(this.sprite, this.getState());
                             movable.moveRightFork(right.sprite, Movable.DIRECTION_AWAY);
                         });
                     }
-                    this.setState(STATE.THINKING);
                     left.setState(STATE.FORK_RELEASED);
                     movables.forEach(movable -> movable.moveLeftFork(left.sprite, Movable.DIRECTION_AWAY));
 

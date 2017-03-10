@@ -19,13 +19,60 @@ public class MyGdxGame extends ApplicationAdapter {
     static final int RADIUS = 300, RADIUS_MIN = 150;
     static final int DT_ANGLE = 90;
     public static Texture thinking, waiting, eating, fork, noodles;
-    Array<Sprite> sprites = new Array<>();
-    Array<ExtendedSprite> forks = new Array<>();
-    Array<ExtendedSprite> phils = new Array<>();
     Array<Sprite> sphagetti = new Array<>();
+
+    Array<Sprite> all = new Array<>();
 
     ShapeRenderer shapeRenderer;
     private OrthographicCamera camera;
+    Movable movable = new Movable() {
+        @Override
+        public void moveLeftFork(Sprite sprite, int direction) {
+            float angle = sprite.getRotation() + DT_ANGLE;
+
+            if (direction == DIRECTION_NEAR) {
+                angle += 10;
+            } else if (direction == DIRECTION_AWAY) {
+                angle -= 10;
+            }
+            float x, y, w, h;
+            float r = RADIUS;
+            x = cx + r * MathUtils.cosDeg(angle);
+            y = cy + r * MathUtils.sinDeg(angle);
+            w = sprite.getRegionWidth();
+            h = sprite.getRegionHeight();
+            sprite.setPosition(x - w / 2f, y - h / 2f);
+            sprite.setRotation(angle - DT_ANGLE);
+        }
+
+        @Override
+        public void moveRightFork(Sprite sprite, int direction) {
+            float angle = sprite.getRotation() + DT_ANGLE;
+
+            if (direction == DIRECTION_NEAR) {
+                angle -= 10;
+            } else if (direction == DIRECTION_AWAY) {
+                angle += 10;
+            }
+            float x, y, w, h;
+            float r = RADIUS;
+            x = cx + r * MathUtils.cosDeg(angle);
+            y = cy + r * MathUtils.sinDeg(angle);
+            w = sprite.getRegionWidth();
+            h = sprite.getRegionHeight();
+            sprite.setPosition(x - w / 2f, y - h / 2f);
+            sprite.setRotation(angle - DT_ANGLE);
+        }
+
+        @Override
+        public void changeSprite(Sprite sprite, AbstractObject.STATE state) {
+            if (state == AbstractObject.STATE.EATING) {
+                sprite.setTexture(eating);
+            } else if (state == AbstractObject.STATE.THINKING) {
+                sprite.setTexture(thinking);
+            }
+        }
+    };
 
     @Override
     public void create() {
@@ -50,36 +97,32 @@ public class MyGdxGame extends ApplicationAdapter {
         int size = 5;
         DiningPhilosopher dp = new DiningPhilosopher(size);
 
+        Sprite forkSprite = new Sprite(fork);
         for (Fork f : dp.forks) {
-            ExtendedSprite sprite = new ExtendedSprite(fork, f);
-            sprite.flip(false, true);
-            forks.add(sprite);
+            f.sprite.set(forkSprite);
+            f.sprite.setSize(fork.getWidth(), fork.getHeight());
+            f.sprite.flip(false, true);
+
         }
 
+        Sprite thinkingSprite = new Sprite(thinking);
         for (Philosopher phil : dp.phils) {
-            ExtendedSprite sprite = new ExtendedSprite(thinking, phil);
-            phils.add(sprite);
-        }
-
-        for (int i = 0; i < forks.size; i++) {
-            sprites.add(forks.get(i));
-            sprites.add(phils.get(i));
-
+            phil.sprite.set(thinkingSprite);
+            phil.addMovable(movable);
             Sprite sprite = new Sprite(noodles);
             sphagetti.add(sprite);
         }
 
-        System.out.println();
-        for (int i = 0; i < size; i++) {
-            Thread thread = new Thread(dp.phils[i]);
-            thread.start();
+        for (int i = 0; i < dp.phils.length; i++) {
+            all.add(dp.forks[i].sprite);
+            all.add(dp.phils[i].sprite);
         }
 
-        final int deltaAngle = 360 / sprites.size;
+        final int deltaAngle = 360 / all.size;
 
-        for (int i = 0; i < sprites.size; i++) {
+        for (int i = 0; i < all.size; i++) {
             int angle = i * deltaAngle;
-            Sprite es = sprites.get(i);
+            Sprite es = all.get(i);
 
             float x, y, w, h;
             float r = RADIUS;
@@ -91,8 +134,8 @@ public class MyGdxGame extends ApplicationAdapter {
             es.setRotation(angle - DT_ANGLE);
         }
 
-        for (int i = 0; i < phils.size; i++) {
-            Sprite es = phils.get(i);
+        for (int i = 0; i < dp.phils.length; i++) {
+            Sprite es = dp.phils[i].sprite;
             float angle = es.getRotation() + DT_ANGLE;
             Sprite sprite = sphagetti.get(i);
 
@@ -103,7 +146,14 @@ public class MyGdxGame extends ApplicationAdapter {
             w = sprite.getRegionWidth();
             h = sprite.getRegionHeight();
             sprite.setPosition(x - w / 2f, y - h / 2f);
-            sprites.add(sprite);
+            all.add(sprite);
+        }
+
+
+        System.out.println("Starting the eating...");
+        for (int i = 0; i < size; i++) {
+            Thread thread = new Thread(dp.phils[i]);
+            thread.start();
         }
     }
 
@@ -126,9 +176,8 @@ public class MyGdxGame extends ApplicationAdapter {
         camera.update();
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
-        sprites.forEach(extendedSprite -> extendedSprite.draw(batch));
+        all.forEach(sprite -> sprite.draw(batch));
         batch.end();
-
 
 
     }
