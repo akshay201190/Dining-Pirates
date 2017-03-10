@@ -13,7 +13,6 @@ public class ExtendedSprite extends Sprite {
     public ExtendedSprite(Texture texture, AbstractObject obj) {
         super(texture);
         this.object = obj;
-        this.object.setSprite(this);
     }
 
     @Override

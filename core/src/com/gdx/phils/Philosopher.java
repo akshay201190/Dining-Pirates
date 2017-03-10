@@ -1,46 +1,68 @@
 package com.gdx.phils;
 
+import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.utils.Array;
+
 /**
  * Created by nairsk on 07/03/17.
  */
 
 public class Philosopher extends AbstractObject implements Runnable {
     public static final int DIRECTIONAL_ANGLE = 50;
+    private final long SLEEP_TIME;
+    private final long EAT_TIME;
+
+    private final Array<Movable> movables = new Array<>();
 
     public Philosopher(int id) {
         super("P" + id);
+        EAT_TIME = 3000 + MathUtils.random(500);
+        SLEEP_TIME = 2000 + MathUtils.random(500);
+        setState(STATE.THINKING);
+    }
+
+    private void think() {
+        try {
+            Thread.sleep(SLEEP_TIME);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void eat() {
+        try {
+            Thread.sleep(EAT_TIME);
+        } catch (InterruptedException e) {
+        }
     }
 
     @Override
     public void run() {
-        while (true) {
-            this.state = STATE.thinking;
-            synchronized (left) {
-                left.state = STATE.fork_acquired;
-                this.state = STATE.waiting;
-                sprite.setTexture(MyGdxGame.waiting);
-                synchronized (right) {
-                    right.state = STATE.fork_acquired;
-                    state = STATE.eating;
-                    sprite.setTexture(MyGdxGame.eating);
-                    try {
-                        Thread.sleep(EAT_TIME);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+        synchronized (this) {
+            while (true) {
+                think();
+                synchronized (left) {
+                    left.setState(STATE.FORK_ACQUIRED);
+                    this.setState(STATE.THINKING);
+                    movables.forEach(movable -> movable.moveLeftFork(left.sprite, Movable.DIRECTION_NEAR));
+
+                    synchronized (right) {
+                        right.setState(STATE.FORK_ACQUIRED);
+                        movables.forEach(movable -> {
+                            movable.moveRightFork(right.sprite, Movable.DIRECTION_NEAR);
+                        });
+                        this.setState(STATE.EATING);
+                        eat();
+                        right.setState(STATE.FORK_RELEASED);
+                        movables.forEach(movable -> {
+                            movable.moveRightFork(right.sprite, Movable.DIRECTION_AWAY);
+                        });
                     }
-                    right.state = STATE.fork_release;
-                    sprite.setTexture(MyGdxGame.waiting);
+                    this.setState(STATE.THINKING);
+                    left.setState(STATE.FORK_RELEASED);
+                    movables.forEach(movable -> movable.moveLeftFork(left.sprite, Movable.DIRECTION_AWAY));
+
                 }
-                left.state = STATE.fork_release;
-                this.state = STATE.thinking;
-                sprite.setTexture(MyGdxGame.thinking);
-            }
-
-
-            try {
-                Thread.sleep(SLEEP_TIME);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
             }
         }
     }
